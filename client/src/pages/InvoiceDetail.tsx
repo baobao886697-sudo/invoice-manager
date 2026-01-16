@@ -27,39 +27,6 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 
-// Helper function to convert oklch colors to rgb
-function convertOklchToRgb(element: HTMLElement) {
-  const computedStyle = window.getComputedStyle(element);
-  const properties = ['color', 'background-color', 'border-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'];
-  
-  properties.forEach(prop => {
-    const value = computedStyle.getPropertyValue(prop);
-    if (value && value.includes('oklch')) {
-      // Create a temporary element to get the computed RGB value
-      const temp = document.createElement('div');
-      temp.style.color = value;
-      document.body.appendChild(temp);
-      const rgbValue = window.getComputedStyle(temp).color;
-      document.body.removeChild(temp);
-      
-      if (prop === 'background-color') {
-        element.style.backgroundColor = rgbValue;
-      } else if (prop === 'color') {
-        element.style.color = rgbValue;
-      } else if (prop === 'border-color') {
-        element.style.borderColor = rgbValue;
-      }
-    }
-  });
-  
-  // Process children recursively
-  Array.from(element.children).forEach(child => {
-    if (child instanceof HTMLElement) {
-      convertOklchToRgb(child);
-    }
-  });
-}
-
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -121,28 +88,29 @@ export default function InvoiceDetail() {
         backgroundColor: "#ffffff",
         useCORS: true,
         allowTaint: true,
-        logging: false,
+        logging: true,
         imageTimeout: 15000,
-        onclone: (clonedDoc, clonedElement) => {
-          // Convert oklch colors to rgb in the cloned element
-          if (clonedElement instanceof HTMLElement) {
-            // Apply inline styles to avoid oklch color issues
-            const allElements = clonedElement.querySelectorAll('*');
-            allElements.forEach((el) => {
-              if (el instanceof HTMLElement) {
-                const computed = window.getComputedStyle(el);
-                // Set explicit colors to avoid oklch parsing issues
-                el.style.color = computed.color;
-                el.style.backgroundColor = computed.backgroundColor;
-                el.style.borderColor = computed.borderColor;
-              }
-            });
-            
-            // Also apply to the root element
-            const computed = window.getComputedStyle(clonedElement);
-            clonedElement.style.color = computed.color;
-            clonedElement.style.backgroundColor = computed.backgroundColor;
-          }
+        foreignObjectRendering: false,
+        removeContainer: true,
+        onclone: (clonedDoc) => {
+          // Remove all stylesheets from cloned document to avoid oklch issues
+          const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
+          stylesheets.forEach(sheet => {
+            if (sheet.parentNode) {
+              sheet.parentNode.removeChild(sheet);
+            }
+          });
+          
+          // Add basic reset styles
+          const resetStyle = clonedDoc.createElement('style');
+          resetStyle.textContent = `
+            * { 
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+          `;
+          clonedDoc.head.appendChild(resetStyle);
         }
       });
       
@@ -325,8 +293,11 @@ ${invoice.walletAddress}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={invoice.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px]">
+            <Select
+              value={invoice.status}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="w-[120px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -388,10 +359,15 @@ ${invoice.walletAddress}
                     const credits = item.credits;
                     const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toString();
                     return (
-                      <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center p-3 bg-muted rounded-lg"
+                      >
                         <div>
                           <p className="font-medium">{creditsStr} 积分套餐</p>
-                          <p className="text-sm text-muted-foreground">{credits.toLocaleString()} 积分</p>
+                          <p className="text-sm text-muted-foreground">
+                            {credits.toLocaleString()} 积分
+                          </p>
                         </div>
                         <p className="font-semibold text-primary">${Number(item.price).toFixed(0)}</p>
                       </div>
@@ -404,7 +380,7 @@ ${invoice.walletAddress}
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">收款地址</p>
-                <div className="p-3 bg-muted/50 rounded-lg font-mono text-sm break-all">
+                <div className="p-3 bg-muted rounded-lg font-mono text-sm break-all">
                   {invoice.walletAddress}
                 </div>
               </div>
@@ -420,11 +396,14 @@ ${invoice.walletAddress}
             <CardContent>
               <div 
                 ref={invoiceRef} 
-                className="invoice-preview bg-white rounded-lg overflow-hidden shadow-lg"
                 style={{ 
                   maxWidth: "400px", 
                   margin: "0 auto",
-                  fontFamily: "system-ui, -apple-system, sans-serif"
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                  backgroundColor: "#ffffff",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
                 }}
               >
                 {/* Header */}
@@ -432,7 +411,7 @@ ${invoice.walletAddress}
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   padding: "24px",
                   textAlign: "center",
-                  color: "white"
+                  color: "#ffffff"
                 }}>
                   <div style={{ 
                     width: "48px", 
@@ -446,12 +425,12 @@ ${invoice.walletAddress}
                   }}>
                     <span style={{ fontSize: "24px" }}>🌐</span>
                   </div>
-                  <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "4px" }}>云端寻踪搜索助手</h2>
-                  <p style={{ fontSize: "14px", opacity: 0.9 }}>收款账单 / Payment Invoice</p>
+                  <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "4px", color: "#ffffff" }}>云端寻踪搜索助手</h2>
+                  <p style={{ fontSize: "14px", opacity: 0.9, color: "#ffffff" }}>收款账单 / Payment Invoice</p>
                 </div>
 
                 {/* Content */}
-                <div style={{ padding: "20px" }}>
+                <div style={{ padding: "20px", backgroundColor: "#ffffff" }}>
                   {/* Order Info */}
                   <div style={{ 
                     display: "flex", 
@@ -460,15 +439,15 @@ ${invoice.walletAddress}
                     fontSize: "13px"
                   }}>
                     <div>
-                      <p style={{ color: "#666", marginBottom: "2px" }}>订单编号</p>
-                      <p style={{ fontWeight: "600", color: "#333" }}>{invoice.invoiceNumber}</p>
+                      <p style={{ color: "#666666", marginBottom: "2px" }}>订单编号</p>
+                      <p style={{ fontWeight: "600", color: "#333333" }}>{invoice.invoiceNumber}</p>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <p style={{ color: "#666", marginBottom: "2px" }}>订单日期</p>
-                      <p style={{ fontWeight: "600", color: "#333" }}>{date}</p>
+                      <p style={{ color: "#666666", marginBottom: "2px" }}>订单日期</p>
+                      <p style={{ fontWeight: "600", color: "#333333" }}>{date}</p>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <p style={{ color: "#666", marginBottom: "2px" }}>订单状态</p>
+                      <p style={{ color: "#666666", marginBottom: "2px" }}>订单状态</p>
                       <p style={{ 
                         fontWeight: "600", 
                         color: invoice.status === "paid" ? "#16a34a" : invoice.status === "pending" ? "#ca8a04" : "#dc2626"
@@ -479,39 +458,25 @@ ${invoice.walletAddress}
                   </div>
 
                   {/* Items Table */}
-                  <div style={{ 
-                    border: "1px solid #e5e7eb", 
-                    borderRadius: "8px", 
-                    overflow: "hidden",
-                    marginBottom: "16px"
-                  }}>
-                    <div style={{ 
-                      background: "#f9fafb", 
-                      padding: "10px 12px",
-                      fontWeight: "600",
-                      fontSize: "13px",
-                      color: "#333"
-                    }}>
-                      购买明细
-                    </div>
+                  <div style={{ marginBottom: "16px" }}>
+                    <p style={{ fontWeight: "600", marginBottom: "8px", fontSize: "14px", color: "#333333" }}>购买明细</p>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                       <thead>
-                        <tr style={{ background: "#f9fafb" }}>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: "500" }}>序号</th>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: "500" }}>商品名称</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666", fontWeight: "500" }}>积分数量</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666", fontWeight: "500" }}>金额(USDT)</th>
+                        <tr style={{ background: "#f3f4f6" }}>
+                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666666", fontWeight: "500" }}>序号</th>
+                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666666", fontWeight: "500" }}>商品名称</th>
+                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666666", fontWeight: "500" }}>积分数量</th>
+                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666666", fontWeight: "500" }}>金额(USDT)</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sortedItems.map((item, index) => {
                           const credits = item.credits;
-                          const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toString();
                           return (
                             <tr key={index} style={{ borderTop: "1px solid #e5e7eb" }}>
-                              <td style={{ padding: "10px 12px", color: "#333" }}>{index + 1}</td>
-                              <td style={{ padding: "10px 12px", color: "#333" }}>积分充值套餐</td>
-                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#333" }}>{credits.toLocaleString()}</td>
+                              <td style={{ padding: "10px 12px", color: "#333333" }}>{index + 1}</td>
+                              <td style={{ padding: "10px 12px", color: "#333333" }}>积分充值套餐</td>
+                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#333333" }}>{credits.toLocaleString()}</td>
                               <td style={{ padding: "10px 12px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>{Number(item.price).toFixed(0)}</td>
                             </tr>
                           );
@@ -529,12 +494,12 @@ ${invoice.walletAddress}
                     fontSize: "13px"
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "#666" }}>商品小计</span>
-                      <span style={{ color: "#333" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
+                      <span style={{ color: "#666666" }}>商品小计</span>
+                      <span style={{ color: "#333333" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "#666" }}>优惠折扣</span>
-                      <span style={{ color: "#333" }}>- 0 USDT</span>
+                      <span style={{ color: "#666666" }}>优惠折扣</span>
+                      <span style={{ color: "#333333" }}>- 0 USDT</span>
                     </div>
                     <div style={{ 
                       display: "flex", 
@@ -543,7 +508,7 @@ ${invoice.walletAddress}
                       borderTop: "1px solid #e5e7eb",
                       fontWeight: "bold"
                     }}>
-                      <span style={{ color: "#333" }}>应付总额</span>
+                      <span style={{ color: "#333333" }}>应付总额</span>
                       <span style={{ color: "#7c3aed", fontSize: "16px" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
                   </div>
@@ -562,7 +527,7 @@ ${invoice.walletAddress}
                       marginBottom: "12px",
                       fontSize: "14px",
                       fontWeight: "600",
-                      color: "#333"
+                      color: "#333333"
                     }}>
                       <span>💳</span>
                       <span>USDT-TRC20 付款信息</span>
@@ -575,17 +540,17 @@ ${invoice.walletAddress}
                       fontFamily: "monospace",
                       fontSize: "11px",
                       wordBreak: "break-all",
-                      color: "#333"
+                      color: "#333333"
                     }}>
                       {invoice.walletAddress}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
                       <div>
-                        <p style={{ color: "#666", marginBottom: "2px" }}>付款金额</p>
+                        <p style={{ color: "#666666", marginBottom: "2px" }}>付款金额</p>
                         <p style={{ fontWeight: "bold", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ color: "#666", marginBottom: "2px" }}>到账金额</p>
+                        <p style={{ color: "#666666", marginBottom: "2px" }}>到账金额</p>
                         <p style={{ fontWeight: "bold", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                     </div>
@@ -615,7 +580,7 @@ ${invoice.walletAddress}
                     paddingTop: "12px",
                     borderTop: "1px solid #e5e7eb",
                     fontSize: "12px",
-                    color: "#666"
+                    color: "#666666"
                   }}>
                     <p>✨ 感谢您选择云端寻踪搜索助手！✨</p>
                   </div>
