@@ -540,56 +540,49 @@ ${invoice.walletAddress}
 
                   {/* Payment Info */}
                   <div style={{ 
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "1px solid #e5e7eb",
                     borderRadius: "8px", 
                     padding: "16px",
                     marginBottom: "20px",
-                    color: "#ffffff"
+                    backgroundColor: "#ffffff"
                   }}>
                     <div style={{ 
                       display: "flex", 
                       alignItems: "center", 
                       gap: "8px",
-                      marginBottom: "12px",
-                      fontSize: "13px",
-                      fontWeight: "600"
+                      marginBottom: "14px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#1e293b"
                     }}>
-                      <span style={{ 
-                        background: "rgba(255,255,255,0.2)",
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        fontSize: "11px"
-                      }}>TRC20</span>
-                      <span>收款地址</span>
+                      <span style={{ fontSize: "18px" }}>💳</span>
+                      <span>USDT-TRC20 付款信息</span>
                     </div>
                     <div style={{ 
-                      background: "rgba(255,255,255,0.15)", 
+                      background: "#f8fafc", 
                       borderRadius: "6px", 
-                      padding: "12px",
+                      padding: "12px 14px",
                       marginBottom: "16px",
+                      border: "1px solid #e2e8f0",
                       fontFamily: "'SF Mono', 'Monaco', 'Consolas', monospace",
-                      fontSize: "12px",
+                      fontSize: "13px",
                       wordBreak: "break-all",
-                      letterSpacing: "0.5px",
-                      lineHeight: "1.5"
+                      color: "#475569",
+                      lineHeight: "1.6"
                     }}>
                       {invoice.walletAddress}
                     </div>
                     <div style={{ 
                       display: "flex", 
-                      justifyContent: "space-between",
-                      background: "rgba(255,255,255,0.1)",
-                      borderRadius: "6px",
-                      padding: "12px"
+                      justifyContent: "space-between"
                     }}>
-                      <div style={{ textAlign: "center", flex: 1 }}>
-                        <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "4px", fontSize: "11px" }}>付款金额</p>
-                        <p style={{ fontWeight: "700", fontSize: "18px" }}>${Number(invoice.totalAmount).toFixed(0)}</p>
+                      <div>
+                        <p style={{ color: "#94a3b8", marginBottom: "6px", fontSize: "12px" }}>付款金额</p>
+                        <p style={{ fontWeight: "700", fontSize: "18px", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
-                      <div style={{ width: "1px", background: "rgba(255,255,255,0.2)" }}></div>
-                      <div style={{ textAlign: "center", flex: 1 }}>
-                        <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "4px", fontSize: "11px" }}>到账金额</p>
-                        <p style={{ fontWeight: "700", fontSize: "18px" }}>${Number(invoice.totalAmount).toFixed(0)}</p>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ color: "#94a3b8", marginBottom: "6px", fontSize: "12px" }}>到账金额</p>
+                        <p style={{ fontWeight: "700", fontSize: "18px", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                     </div>
                   </div>
