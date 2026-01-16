@@ -65,7 +65,10 @@ export async function bulkCreatePriceTiers(tiers: InsertPriceTier[]): Promise<vo
   if (!db) throw new Error("Database not available");
   
   if (tiers.length > 0) {
-    await db.insert(priceTiers).values(tiers);
+    // Insert one by one to avoid batch insert issues with Drizzle ORM
+    for (const tier of tiers) {
+      await db.insert(priceTiers).values(tier);
+    }
   }
 }
 
