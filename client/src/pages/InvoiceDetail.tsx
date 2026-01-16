@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Download, Copy, Check, Loader2, Trash2 } from "lucide-react";
-import { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
@@ -33,6 +33,7 @@ export default function InvoiceDetail() {
   const [copied, setCopied] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const utils = trpc.useUtils();
@@ -92,7 +93,8 @@ export default function InvoiceDetail() {
         imageTimeout: 15000,
         foreignObjectRendering: false,
         removeContainer: true,
-        width: 420,
+        width: 400,
+        windowWidth: 400,
         onclone: (clonedDoc) => {
           // Remove all stylesheets from cloned document to avoid oklch issues
           const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
@@ -115,18 +117,49 @@ export default function InvoiceDetail() {
         }
       });
       
-      // Convert to blob and create download link
+      // Convert to blob
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.download = `${invoice?.invoiceNumber || "invoice"}.png`;
-          link.href = url;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          toast.success("图片导出成功");
+          
+          // Check if on mobile device
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          
+          if (isMobile) {
+            // For mobile: try to use share API or open in new tab
+            if (navigator.share && navigator.canShare) {
+              const file = new File([blob], `${invoice?.invoiceNumber || "invoice"}.png`, { type: 'image/png' });
+              if (navigator.canShare({ files: [file] })) {
+                navigator.share({
+                  files: [file],
+                  title: '账单图片',
+                }).then(() => {
+                  toast.success("图片已分享");
+                }).catch(() => {
+                  // Fallback to opening in new tab
+                  window.open(url, '_blank');
+                  toast.success("图片已打开，长按可保存");
+                });
+              } else {
+                window.open(url, '_blank');
+                toast.success("图片已打开，长按可保存");
+              }
+            } else {
+              // Fallback: open image in new tab for long-press save
+              window.open(url, '_blank');
+              toast.success("图片已打开，长按可保存");
+            }
+          } else {
+            // For desktop: download directly
+            const link = document.createElement("a");
+            link.download = `${invoice?.invoiceNumber || "invoice"}.png`;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("图片导出成功");
+          }
         } else {
           toast.error("导出失败：无法生成图片");
         }
@@ -138,6 +171,53 @@ export default function InvoiceDetail() {
       setIsExporting(false);
     }
   };
+
+  // Generate preview image for long-press save
+  const generatePreviewImage = async () => {
+    if (!invoiceRef.current) return;
+    
+    try {
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 15000,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        width: 400,
+        windowWidth: 400,
+        onclone: (clonedDoc) => {
+          const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
+          stylesheets.forEach(sheet => {
+            if (sheet.parentNode) {
+              sheet.parentNode.removeChild(sheet);
+            }
+          });
+          const resetStyle = clonedDoc.createElement('style');
+          resetStyle.textContent = `* { box-sizing: border-box; margin: 0; padding: 0; }`;
+          clonedDoc.head.appendChild(resetStyle);
+        }
+      });
+      
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      setPreviewImageUrl(dataUrl);
+    } catch (error) {
+      console.error("Preview generation error:", error);
+    }
+  };
+
+  // Generate preview image when invoice data is loaded
+  React.useEffect(() => {
+    if (invoice && invoiceRef.current) {
+      // Small delay to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        generatePreviewImage();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [invoice]);
 
   const generateTextVersion = () => {
     if (!invoice) return "";
@@ -561,14 +641,16 @@ ${invoice.walletAddress}
                     <div style={{ 
                       background: "#ffffff", 
                       borderRadius: "4px", 
-                      padding: "10px 12px",
+                      padding: "12px",
                       marginBottom: "12px",
-                      border: "1px solid #e2e8f0",
+                      border: "1px solid #cbd5e1",
                       fontFamily: "'SF Mono', 'Monaco', 'Consolas', monospace",
-                      fontSize: "12px",
+                      fontSize: "13px",
                       wordBreak: "break-all",
                       color: "#1e293b",
-                      lineHeight: "1.5"
+                      lineHeight: "1.5",
+                      textAlign: "center",
+                      fontWeight: "500"
                     }}>
                       {invoice.walletAddress}
                     </div>
@@ -623,6 +705,19 @@ ${invoice.walletAddress}
                   </div>
                 </div>
               </div>
+              
+              {/* Long-press saveable image preview */}
+              {previewImageUrl && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">长按图片可直接保存到相册</p>
+                  <img 
+                    src={previewImageUrl} 
+                    alt="账单预览" 
+                    className="max-w-full rounded-lg shadow-md mx-auto"
+                    style={{ maxWidth: '400px' }}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
