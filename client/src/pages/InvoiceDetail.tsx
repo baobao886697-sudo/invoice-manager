@@ -406,35 +406,36 @@ ${invoice.walletAddress}
                 {/* Header */}
                 <div style={{ 
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  padding: "32px 24px",
+                  padding: "24px 20px",
                   textAlign: "center",
                   color: "#ffffff"
                 }}>
                   <h2 style={{ 
-                    fontSize: "24px", 
-                    fontWeight: "700", 
+                    fontSize: "20px", 
+                    fontWeight: "600", 
                     color: "#ffffff", 
-                    margin: "0 0 8px 0",
-                    letterSpacing: "2px"
+                    margin: "0 0 6px 0",
+                    letterSpacing: "1px",
+                    fontFamily: "'PingFang SC', 'Microsoft YaHei', sans-serif"
                   }}>云端寻踪搜索助手</h2>
                   <p style={{ 
-                    fontSize: "13px", 
-                    color: "rgba(255,255,255,0.85)", 
+                    fontSize: "11px", 
+                    color: "rgba(255,255,255,0.8)", 
                     margin: 0,
-                    letterSpacing: "1px"
+                    letterSpacing: "2px"
                   }}>PAYMENT INVOICE</p>
                 </div>
 
                 {/* Content */}
-                <div style={{ padding: "24px", backgroundColor: "#ffffff" }}>
+                <div style={{ padding: "16px", backgroundColor: "#ffffff" }}>
                   {/* Order Info */}
                   <div style={{ 
                     display: "flex", 
                     justifyContent: "space-between", 
-                    marginBottom: "20px",
-                    padding: "16px",
+                    marginBottom: "14px",
+                    padding: "12px",
                     background: "#f8fafc",
-                    borderRadius: "8px"
+                    borderRadius: "6px"
                   }}>
                     <div>
                       <p style={{ color: "#94a3b8", marginBottom: "4px", fontSize: "12px" }}>订单编号</p>
@@ -463,11 +464,11 @@ ${invoice.walletAddress}
                   </div>
 
                   {/* Items Table */}
-                  <div style={{ marginBottom: "20px" }}>
+                  <div style={{ marginBottom: "14px" }}>
                     <p style={{ 
                       fontWeight: "600", 
-                      marginBottom: "12px", 
-                      fontSize: "14px", 
+                      marginBottom: "8px", 
+                      fontSize: "13px", 
                       color: "#1e293b",
                       display: "flex",
                       alignItems: "center",
@@ -481,13 +482,13 @@ ${invoice.walletAddress}
                       }}></span>
                       购买明细
                     </p>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                       <thead>
                         <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-                          <th style={{ padding: "10px 8px", textAlign: "left", color: "#64748b", fontWeight: "500", width: "50px" }}>#</th>
-                          <th style={{ padding: "10px 8px", textAlign: "left", color: "#64748b", fontWeight: "500" }}>商品名称</th>
-                          <th style={{ padding: "10px 8px", textAlign: "right", color: "#64748b", fontWeight: "500" }}>积分</th>
-                          <th style={{ padding: "10px 8px", textAlign: "right", color: "#64748b", fontWeight: "500" }}>金额</th>
+                          <th style={{ padding: "8px 6px", textAlign: "left", color: "#64748b", fontWeight: "500", width: "40px" }}>#</th>
+                          <th style={{ padding: "8px 6px", textAlign: "left", color: "#64748b", fontWeight: "500" }}>商品名称</th>
+                          <th style={{ padding: "8px 6px", textAlign: "right", color: "#64748b", fontWeight: "500" }}>积分</th>
+                          <th style={{ padding: "8px 6px", textAlign: "right", color: "#64748b", fontWeight: "500" }}>金额</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -495,10 +496,10 @@ ${invoice.walletAddress}
                           const credits = item.credits;
                           return (
                             <tr key={index} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                              <td style={{ padding: "12px 8px", color: "#94a3b8" }}>{index + 1}</td>
-                              <td style={{ padding: "12px 8px", color: "#1e293b", fontWeight: "500" }}>积分充值套餐</td>
-                              <td style={{ padding: "12px 8px", textAlign: "right", color: "#475569" }}>{credits.toLocaleString()}</td>
-                              <td style={{ padding: "12px 8px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>${Number(item.price).toFixed(0)}</td>
+                              <td style={{ padding: "8px 6px", color: "#94a3b8" }}>{index + 1}</td>
+                              <td style={{ padding: "8px 6px", color: "#1e293b", fontWeight: "500" }}>积分充值套餐</td>
+                              <td style={{ padding: "8px 6px", textAlign: "right", color: "#475569" }}>{credits.toLocaleString()}</td>
+                              <td style={{ padding: "8px 6px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>${Number(item.price).toFixed(0)}</td>
                             </tr>
                           );
                         })}
@@ -509,15 +510,15 @@ ${invoice.walletAddress}
                   {/* Summary */}
                   <div style={{ 
                     background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", 
-                    borderRadius: "8px", 
-                    padding: "16px",
-                    marginBottom: "20px"
+                    borderRadius: "6px", 
+                    padding: "12px",
+                    marginBottom: "14px"
                   }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "13px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "12px" }}>
                       <span style={{ color: "#64748b" }}>商品小计</span>
                       <span style={{ color: "#475569" }}>${Number(invoice.totalAmount).toFixed(0)}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "13px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "12px" }}>
                       <span style={{ color: "#64748b" }}>优惠折扣</span>
                       <span style={{ color: "#475569" }}>-$0</span>
                     </div>
@@ -525,50 +526,49 @@ ${invoice.walletAddress}
                       display: "flex", 
                       justifyContent: "space-between", 
                       alignItems: "center",
-                      paddingTop: "12px",
+                      paddingTop: "8px",
                       borderTop: "1px dashed #cbd5e1"
                     }}>
-                      <span style={{ color: "#1e293b", fontSize: "15px", fontWeight: "600" }}>应付总额</span>
+                      <span style={{ color: "#1e293b", fontSize: "13px", fontWeight: "600" }}>应付总额</span>
                       <span style={{ 
                         color: "#7c3aed", 
-                        fontSize: "22px", 
-                        fontWeight: "700",
-                        letterSpacing: "-0.5px"
+                        fontSize: "18px", 
+                        fontWeight: "700"
                       }}>${Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
                   </div>
 
                   {/* Payment Info */}
                   <div style={{ 
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px", 
-                    padding: "16px",
-                    marginBottom: "20px",
-                    backgroundColor: "#ffffff"
+                    background: "linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)",
+                    borderRadius: "6px", 
+                    padding: "12px",
+                    marginBottom: "14px",
+                    border: "1px solid #d4deff"
                   }}>
                     <div style={{ 
                       display: "flex", 
                       alignItems: "center", 
-                      gap: "8px",
-                      marginBottom: "14px",
-                      fontSize: "14px",
+                      gap: "6px",
+                      marginBottom: "10px",
+                      fontSize: "13px",
                       fontWeight: "600",
-                      color: "#1e293b"
+                      color: "#3b5998"
                     }}>
-                      <span style={{ fontSize: "18px" }}>💳</span>
+                      <span style={{ fontSize: "16px" }}>💳</span>
                       <span>USDT-TRC20 付款信息</span>
                     </div>
                     <div style={{ 
-                      background: "#f8fafc", 
-                      borderRadius: "6px", 
-                      padding: "12px 14px",
-                      marginBottom: "16px",
+                      background: "#ffffff", 
+                      borderRadius: "4px", 
+                      padding: "10px 12px",
+                      marginBottom: "12px",
                       border: "1px solid #e2e8f0",
                       fontFamily: "'SF Mono', 'Monaco', 'Consolas', monospace",
-                      fontSize: "13px",
+                      fontSize: "12px",
                       wordBreak: "break-all",
-                      color: "#475569",
-                      lineHeight: "1.6"
+                      color: "#1e293b",
+                      lineHeight: "1.5"
                     }}>
                       {invoice.walletAddress}
                     </div>
@@ -577,12 +577,12 @@ ${invoice.walletAddress}
                       justifyContent: "space-between"
                     }}>
                       <div>
-                        <p style={{ color: "#94a3b8", marginBottom: "6px", fontSize: "12px" }}>付款金额</p>
-                        <p style={{ fontWeight: "700", fontSize: "18px", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
+                        <p style={{ color: "#64748b", marginBottom: "4px", fontSize: "11px" }}>付款金额</p>
+                        <p style={{ fontWeight: "700", fontSize: "16px", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ color: "#94a3b8", marginBottom: "6px", fontSize: "12px" }}>到账金额</p>
-                        <p style={{ fontWeight: "700", fontSize: "18px", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
+                        <p style={{ color: "#64748b", marginBottom: "4px", fontSize: "11px" }}>到账金额</p>
+                        <p style={{ fontWeight: "700", fontSize: "16px", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                     </div>
                   </div>
@@ -590,22 +590,22 @@ ${invoice.walletAddress}
                   {/* Notice */}
                   <div style={{ 
                     background: "#fffbeb", 
-                    borderRadius: "8px", 
-                    padding: "14px",
-                    fontSize: "12px",
+                    borderRadius: "6px", 
+                    padding: "10px",
+                    fontSize: "11px",
                     color: "#78350f",
                     borderLeft: "3px solid #f59e0b"
                   }}>
                     <p style={{ 
                       fontWeight: "600", 
-                      marginBottom: "10px", 
-                      fontSize: "13px",
+                      marginBottom: "6px", 
+                      fontSize: "12px",
                       color: "#92400e"
                     }}>温馨提示</p>
-                    <div style={{ lineHeight: "1.8", color: "#a16207" }}>
-                      <p style={{ margin: "0 0 4px 0" }}>• 请确保转账网络为 TRC20</p>
-                      <p style={{ margin: "0 0 4px 0" }}>• 转账金额请与应付金额保持一致</p>
-                      <p style={{ margin: "0 0 4px 0" }}>• 付款完成后请保留交易凭证</p>
+                    <div style={{ lineHeight: "1.6", color: "#a16207" }}>
+                      <p style={{ margin: "0 0 2px 0" }}>• 请确保转账网络为 TRC20</p>
+                      <p style={{ margin: "0 0 2px 0" }}>• 转账金额请与应付金额保持一致</p>
+                      <p style={{ margin: "0 0 2px 0" }}>• 付款完成后请保留交易凭证</p>
                       <p style={{ margin: 0 }}>• 积分将在24小时内充值到您的账户</p>
                     </div>
                   </div>
@@ -613,10 +613,10 @@ ${invoice.walletAddress}
                   {/* Footer */}
                   <div style={{ 
                     textAlign: "center", 
-                    marginTop: "20px",
-                    paddingTop: "16px",
+                    marginTop: "12px",
+                    paddingTop: "10px",
                     borderTop: "1px solid #f1f5f9",
-                    fontSize: "12px",
+                    fontSize: "11px",
                     color: "#94a3b8"
                   }}>
                     <p style={{ margin: 0 }}>感谢您的信任与支持</p>
