@@ -27,6 +27,39 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 
+// Helper function to convert oklch colors to rgb
+function convertOklchToRgb(element: HTMLElement) {
+  const computedStyle = window.getComputedStyle(element);
+  const properties = ['color', 'background-color', 'border-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'];
+  
+  properties.forEach(prop => {
+    const value = computedStyle.getPropertyValue(prop);
+    if (value && value.includes('oklch')) {
+      // Create a temporary element to get the computed RGB value
+      const temp = document.createElement('div');
+      temp.style.color = value;
+      document.body.appendChild(temp);
+      const rgbValue = window.getComputedStyle(temp).color;
+      document.body.removeChild(temp);
+      
+      if (prop === 'background-color') {
+        element.style.backgroundColor = rgbValue;
+      } else if (prop === 'color') {
+        element.style.color = rgbValue;
+      } else if (prop === 'border-color') {
+        element.style.borderColor = rgbValue;
+      }
+    }
+  });
+  
+  // Process children recursively
+  Array.from(element.children).forEach(child => {
+    if (child instanceof HTMLElement) {
+      convertOklchToRgb(child);
+    }
+  });
+}
+
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -90,11 +123,25 @@ export default function InvoiceDetail() {
         allowTaint: true,
         logging: false,
         imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          // Ensure all styles are applied to cloned element
-          const clonedElement = clonedDoc.querySelector('.invoice-preview');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.transform = 'none';
+        onclone: (clonedDoc, clonedElement) => {
+          // Convert oklch colors to rgb in the cloned element
+          if (clonedElement instanceof HTMLElement) {
+            // Apply inline styles to avoid oklch color issues
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach((el) => {
+              if (el instanceof HTMLElement) {
+                const computed = window.getComputedStyle(el);
+                // Set explicit colors to avoid oklch parsing issues
+                el.style.color = computed.color;
+                el.style.backgroundColor = computed.backgroundColor;
+                el.style.borderColor = computed.borderColor;
+              }
+            });
+            
+            // Also apply to the root element
+            const computed = window.getComputedStyle(clonedElement);
+            clonedElement.style.color = computed.color;
+            clonedElement.style.backgroundColor = computed.backgroundColor;
           }
         }
       });
@@ -328,9 +375,7 @@ ${invoice.walletAddress}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">总金额</p>
-                  <p className="font-bold text-primary text-lg">
-                    ${Number(invoice.totalAmount).toLocaleString()} USDT
-                  </p>
+                  <p className="font-medium text-primary">${Number(invoice.totalAmount).toFixed(0)} USDT</p>
                 </div>
               </div>
 
@@ -339,25 +384,19 @@ ${invoice.walletAddress}
               <div>
                 <p className="text-sm text-muted-foreground mb-2">购买明细</p>
                 <div className="space-y-2">
-                  {sortedItems.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center p-3 bg-muted/50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {item.credits >= 10000
-                            ? `${item.credits / 10000}万`
-                            : item.credits.toLocaleString()}{" "}
-                          积分套餐
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.credits.toLocaleString()} 积分
-                        </p>
+                  {sortedItems.map((item, index) => {
+                    const credits = item.credits;
+                    const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toString();
+                    return (
+                      <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{creditsStr} 积分套餐</p>
+                          <p className="text-sm text-muted-foreground">{credits.toLocaleString()} 积分</p>
+                        </div>
+                        <p className="font-semibold text-primary">${Number(item.price).toFixed(0)}</p>
                       </div>
-                      <p className="font-bold text-primary">${Number(item.price).toFixed(0)}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -365,20 +404,10 @@ ${invoice.walletAddress}
 
               <div>
                 <p className="text-sm text-muted-foreground mb-2">收款地址</p>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm break-all font-mono">{invoice.walletAddress}</p>
+                <div className="p-3 bg-muted/50 rounded-lg font-mono text-sm break-all">
+                  {invoice.walletAddress}
                 </div>
               </div>
-
-              {invoice.customerNote && (
-                <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">备注</p>
-                    <p className="text-sm">{invoice.customerNote}</p>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
 
@@ -389,139 +418,206 @@ ${invoice.walletAddress}
               <CardDescription>可导出为图片或复制文本</CardDescription>
             </CardHeader>
             <CardContent>
-              <div
-                ref={invoiceRef}
+              <div 
+                ref={invoiceRef} 
                 className="invoice-preview bg-white rounded-lg overflow-hidden shadow-lg"
-                style={{ maxWidth: "400px", margin: "0 auto" }}
+                style={{ 
+                  maxWidth: "400px", 
+                  margin: "0 auto",
+                  fontFamily: "system-ui, -apple-system, sans-serif"
+                }}
               >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                      🌐
-                    </div>
-                    <span className="text-xl font-bold">云端寻踪搜索助手</span>
+                <div style={{ 
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  padding: "24px",
+                  textAlign: "center",
+                  color: "white"
+                }}>
+                  <div style={{ 
+                    width: "48px", 
+                    height: "48px", 
+                    background: "rgba(255,255,255,0.2)", 
+                    borderRadius: "50%",
+                    margin: "0 auto 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <span style={{ fontSize: "24px" }}>🌐</span>
                   </div>
-                  <p className="text-sm opacity-90">收款账单 / Payment Invoice</p>
+                  <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "4px" }}>云端寻踪搜索助手</h2>
+                  <p style={{ fontSize: "14px", opacity: 0.9 }}>收款账单 / Payment Invoice</p>
                 </div>
 
-                {/* Order Info */}
-                <div className="p-6">
-                  <div className="flex justify-between text-sm mb-6">
+                {/* Content */}
+                <div style={{ padding: "20px" }}>
+                  {/* Order Info */}
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    marginBottom: "16px",
+                    fontSize: "13px"
+                  }}>
                     <div>
-                      <p className="text-gray-500">订单编号</p>
-                      <p className="font-medium">{invoice.invoiceNumber}</p>
+                      <p style={{ color: "#666", marginBottom: "2px" }}>订单编号</p>
+                      <p style={{ fontWeight: "600", color: "#333" }}>{invoice.invoiceNumber}</p>
                     </div>
-                    <div className="text-center">
-                      <p className="text-gray-500">订单日期</p>
-                      <p className="font-medium">{date}</p>
+                    <div style={{ textAlign: "center" }}>
+                      <p style={{ color: "#666", marginBottom: "2px" }}>订单日期</p>
+                      <p style={{ fontWeight: "600", color: "#333" }}>{date}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-gray-500">订单状态</p>
-                      <p
-                        className={`font-medium ${
-                          invoice.status === "paid"
-                            ? "text-green-600"
-                            : invoice.status === "pending"
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {invoice.status === "paid"
-                          ? "✅ 已付款"
-                          : invoice.status === "pending"
-                          ? "⏳ 待付款"
-                          : "❌ 已取消"}
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ color: "#666", marginBottom: "2px" }}>订单状态</p>
+                      <p style={{ 
+                        fontWeight: "600", 
+                        color: invoice.status === "paid" ? "#16a34a" : invoice.status === "pending" ? "#ca8a04" : "#dc2626"
+                      }}>
+                        {invoice.status === "paid" ? "✓ 已付款" : invoice.status === "pending" ? "待付款" : "已取消"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Items */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-1 h-5 bg-yellow-500 rounded"></div>
-                      <span className="font-bold">购买明细</span>
+                  {/* Items Table */}
+                  <div style={{ 
+                    border: "1px solid #e5e7eb", 
+                    borderRadius: "8px", 
+                    overflow: "hidden",
+                    marginBottom: "16px"
+                  }}>
+                    <div style={{ 
+                      background: "#f9fafb", 
+                      padding: "10px 12px",
+                      fontWeight: "600",
+                      fontSize: "13px",
+                      color: "#333"
+                    }}>
+                      购买明细
                     </div>
-                    <table className="w-full text-sm">
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                       <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 text-gray-500">序号</th>
-                          <th className="text-left py-2 text-gray-500">商品名称</th>
-                          <th className="text-left py-2 text-gray-500">积分数量</th>
-                          <th className="text-right py-2 text-gray-500">金额 (USDT)</th>
+                        <tr style={{ background: "#f9fafb" }}>
+                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: "500" }}>序号</th>
+                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666", fontWeight: "500" }}>商品名称</th>
+                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666", fontWeight: "500" }}>积分数量</th>
+                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666", fontWeight: "500" }}>金额(USDT)</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedItems.map((item, index) => (
-                          <tr key={item.id} className="border-b">
-                            <td className="py-3">{index + 1}</td>
-                            <td className="py-3">积分充值套餐</td>
-                            <td className="py-3">{item.credits.toLocaleString()}</td>
-                            <td className="py-3 text-right text-indigo-600 font-bold">
-                              {Number(item.price).toFixed(0)}
-                            </td>
-                          </tr>
-                        ))}
+                        {sortedItems.map((item, index) => {
+                          const credits = item.credits;
+                          const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toString();
+                          return (
+                            <tr key={index} style={{ borderTop: "1px solid #e5e7eb" }}>
+                              <td style={{ padding: "10px 12px", color: "#333" }}>{index + 1}</td>
+                              <td style={{ padding: "10px 12px", color: "#333" }}>积分充值套餐</td>
+                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#333" }}>{credits.toLocaleString()}</td>
+                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>{Number(item.price).toFixed(0)}</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
 
                   {/* Summary */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">商品小计</span>
-                      <span>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
+                  <div style={{ 
+                    background: "#f9fafb", 
+                    borderRadius: "8px", 
+                    padding: "12px",
+                    marginBottom: "16px",
+                    fontSize: "13px"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <span style={{ color: "#666" }}>商品小计</span>
+                      <span style={{ color: "#333" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-600">优惠折扣</span>
-                      <span>- 0 USDT</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <span style={{ color: "#666" }}>优惠折扣</span>
+                      <span style={{ color: "#333" }}>- 0 USDT</span>
                     </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-bold text-lg">
-                      <span>应付总额</span>
-                      <span className="text-indigo-600">
-                        {Number(invoice.totalAmount).toFixed(0)} USDT
-                      </span>
+                    <div style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      paddingTop: "8px",
+                      borderTop: "1px solid #e5e7eb",
+                      fontWeight: "bold"
+                    }}>
+                      <span style={{ color: "#333" }}>应付总额</span>
+                      <span style={{ color: "#7c3aed", fontSize: "16px" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
                   </div>
 
                   {/* Payment Info */}
-                  <div className="bg-indigo-50 rounded-lg p-4 mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-indigo-600">💳</span>
-                      <span className="font-medium text-indigo-600">USDT-TRC20 付款信息</span>
+                  <div style={{ 
+                    border: "1px solid #e5e7eb", 
+                    borderRadius: "8px", 
+                    padding: "12px",
+                    marginBottom: "16px"
+                  }}>
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: "8px",
+                      marginBottom: "12px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      color: "#333"
+                    }}>
+                      <span>💳</span>
+                      <span>USDT-TRC20 付款信息</span>
                     </div>
-                    <div className="bg-white rounded p-3 mb-3">
-                      <p className="text-xs text-gray-500 break-all">{invoice.walletAddress}</p>
+                    <div style={{ 
+                      background: "#f9fafb", 
+                      borderRadius: "6px", 
+                      padding: "10px",
+                      marginBottom: "12px",
+                      fontFamily: "monospace",
+                      fontSize: "11px",
+                      wordBreak: "break-all",
+                      color: "#333"
+                    }}>
+                      {invoice.walletAddress}
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
                       <div>
-                        <p className="text-gray-500">付款金额</p>
-                        <p className="text-indigo-600 font-bold text-lg">
-                          {Number(invoice.totalAmount).toFixed(0)} USDT
-                        </p>
+                        <p style={{ color: "#666", marginBottom: "2px" }}>付款金额</p>
+                        <p style={{ fontWeight: "bold", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-gray-500">到账金额</p>
-                        <p className="text-green-600 font-bold text-lg">
-                          {Number(invoice.totalAmount).toFixed(0)} USDT
-                        </p>
+                      <div style={{ textAlign: "right" }}>
+                        <p style={{ color: "#666", marginBottom: "2px" }}>到账金额</p>
+                        <p style={{ fontWeight: "bold", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Tips */}
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p className="font-medium text-gray-700">⚠️ 温馨提示:</p>
-                    <p>• 请确保转账网络为 TRC20，其他网络转账将无法到账</p>
-                    <p>• 转账金额请与应付金额保持一致</p>
-                    <p>• 付款完成后请保留交易凭证</p>
-                    <p>• 积分将在确认到账后24小时内充值到您的账户</p>
+                  {/* Notice */}
+                  <div style={{ 
+                    background: "#fef3c7", 
+                    borderRadius: "8px", 
+                    padding: "12px",
+                    fontSize: "12px",
+                    color: "#92400e"
+                  }}>
+                    <p style={{ fontWeight: "600", marginBottom: "8px" }}>⚠️ 温馨提示：</p>
+                    <ul style={{ margin: 0, paddingLeft: "16px", lineHeight: "1.6" }}>
+                      <li>请确保转账网络为 TRC20，其他网络转账将无法到账</li>
+                      <li>转账金额请与应付金额保持一致</li>
+                      <li>付款完成后请保留交易凭证</li>
+                      <li>积分将在确认到账后24小时内充值到您的账户</li>
+                    </ul>
                   </div>
 
                   {/* Footer */}
-                  <div className="text-center mt-6 text-sm text-gray-400">
-                    ✨ 感谢您选择云端寻踪搜索助手！ ✨
+                  <div style={{ 
+                    textAlign: "center", 
+                    marginTop: "16px",
+                    paddingTop: "12px",
+                    borderTop: "1px solid #e5e7eb",
+                    fontSize: "12px",
+                    color: "#666"
+                  }}>
+                    <p>✨ 感谢您选择云端寻踪搜索助手！✨</p>
                   </div>
                 </div>
               </div>
@@ -530,7 +626,7 @@ ${invoice.walletAddress}
         </div>
       </div>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -541,10 +637,7 @@ ${invoice.walletAddress}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               删除
             </AlertDialogAction>
           </AlertDialogFooter>
