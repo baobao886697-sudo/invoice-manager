@@ -88,10 +88,11 @@ export default function InvoiceDetail() {
         backgroundColor: "#ffffff",
         useCORS: true,
         allowTaint: true,
-        logging: true,
+        logging: false,
         imageTimeout: 15000,
         foreignObjectRendering: false,
         removeContainer: true,
+        width: 420,
         onclone: (clonedDoc) => {
           // Remove all stylesheets from cloned document to avoid oklch issues
           const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
@@ -357,19 +358,14 @@ ${invoice.walletAddress}
                 <div className="space-y-2">
                   {sortedItems.map((item, index) => {
                     const credits = item.credits;
-                    const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toString();
+                    const creditsStr = credits >= 10000 ? `${credits / 10000}万` : credits.toLocaleString();
                     return (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center p-3 bg-muted rounded-lg"
-                      >
+                      <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
                         <div>
                           <p className="font-medium">{creditsStr} 积分套餐</p>
-                          <p className="text-sm text-muted-foreground">
-                            {credits.toLocaleString()} 积分
-                          </p>
+                          <p className="text-sm text-muted-foreground">{credits.toLocaleString()} 积分</p>
                         </div>
-                        <p className="font-semibold text-primary">${Number(item.price).toFixed(0)}</p>
+                        <p className="font-medium text-primary">${Number(item.price).toFixed(0)}</p>
                       </div>
                     );
                   })}
@@ -397,7 +393,8 @@ ${invoice.walletAddress}
               <div 
                 ref={invoiceRef} 
                 style={{ 
-                  maxWidth: "400px", 
+                  width: "420px", 
+                  minWidth: "420px",
                   margin: "0 auto",
                   fontFamily: "system-ui, -apple-system, sans-serif",
                   backgroundColor: "#ffffff",
@@ -459,14 +456,14 @@ ${invoice.walletAddress}
 
                   {/* Items Table */}
                   <div style={{ marginBottom: "16px" }}>
-                    <p style={{ fontWeight: "600", marginBottom: "8px", fontSize: "14px", color: "#333333" }}>购买明细</p>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <p style={{ fontWeight: "600", marginBottom: "8px", fontSize: "14px", color: "#333333", borderLeft: "3px solid #f59e0b", paddingLeft: "8px" }}>购买明细</p>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", tableLayout: "fixed" }}>
                       <thead>
                         <tr style={{ background: "#f3f4f6" }}>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666666", fontWeight: "500" }}>序号</th>
-                          <th style={{ padding: "8px 12px", textAlign: "left", color: "#666666", fontWeight: "500" }}>商品名称</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666666", fontWeight: "500" }}>积分数量</th>
-                          <th style={{ padding: "8px 12px", textAlign: "right", color: "#666666", fontWeight: "500" }}>金额(USDT)</th>
+                          <th style={{ padding: "8px 6px", textAlign: "center", color: "#666666", fontWeight: "500", width: "40px", whiteSpace: "nowrap" }}>序号</th>
+                          <th style={{ padding: "8px 6px", textAlign: "left", color: "#666666", fontWeight: "500", width: "120px", whiteSpace: "nowrap" }}>商品名称</th>
+                          <th style={{ padding: "8px 6px", textAlign: "right", color: "#666666", fontWeight: "500", width: "90px", whiteSpace: "nowrap" }}>积分数量</th>
+                          <th style={{ padding: "8px 6px", textAlign: "right", color: "#666666", fontWeight: "500", width: "90px", whiteSpace: "nowrap" }}>金额(USDT)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -474,10 +471,10 @@ ${invoice.walletAddress}
                           const credits = item.credits;
                           return (
                             <tr key={index} style={{ borderTop: "1px solid #e5e7eb" }}>
-                              <td style={{ padding: "10px 12px", color: "#333333" }}>{index + 1}</td>
-                              <td style={{ padding: "10px 12px", color: "#333333" }}>积分充值套餐</td>
-                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#333333" }}>{credits.toLocaleString()}</td>
-                              <td style={{ padding: "10px 12px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>{Number(item.price).toFixed(0)}</td>
+                              <td style={{ padding: "10px 6px", color: "#333333", textAlign: "center" }}>{index + 1}</td>
+                              <td style={{ padding: "10px 6px", color: "#333333", whiteSpace: "nowrap" }}>积分充值套餐</td>
+                              <td style={{ padding: "10px 6px", textAlign: "right", color: "#333333" }}>{credits.toLocaleString()}</td>
+                              <td style={{ padding: "10px 6px", textAlign: "right", color: "#7c3aed", fontWeight: "600" }}>{Number(item.price).toFixed(0)}</td>
                             </tr>
                           );
                         })}
