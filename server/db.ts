@@ -169,23 +169,36 @@ export async function deleteInvoice(id: number, userId: number): Promise<{ succe
   return { success: true };
 }
 
+// Generate a random 6-digit number
+function generateRandomNumber(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 export async function getNextInvoiceNumber(userId: number): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `#INV${dateStr}`;
   
-  const [countResult] = await db.select({ count: sql<number>`count(*)` })
-    .from(invoices)
-    .where(and(
-      eq(invoices.userId, userId),
-      like(invoices.invoiceNumber, `${prefix}%`)
-    ));
+  // Try up to 10 times to generate a unique invoice number
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const randomNum = generateRandomNumber();
+    const invoiceNumber = `#INV${dateStr}${randomNum}`;
+    
+    // Check if this invoice number already exists
+    const [existing] = await db.select({ count: sql<number>`count(*)` })
+      .from(invoices)
+      .where(eq(invoices.invoiceNumber, invoiceNumber));
+    
+    if (Number(existing.count) === 0) {
+      return invoiceNumber;
+    }
+  }
   
-  const nextNum = Number(countResult.count) + 1;
-  return `${prefix}${String(nextNum).padStart(3, '0')}`;
+  // Fallback: use timestamp to ensure uniqueness
+  const timestamp = Date.now().toString().slice(-6);
+  return `#INV${dateStr}${timestamp}`;
 }
 
 // ============ Invoice Items Functions ============
