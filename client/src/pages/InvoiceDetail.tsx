@@ -400,31 +400,39 @@ ${invoice.walletAddress}
                   backgroundColor: "#ffffff",
                   borderRadius: "16px",
                   overflow: "hidden",
+                  border: "1px solid #e5e7eb",
                   boxShadow: "0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 4px 20px -5px rgba(0, 0, 0, 0.1)"
                 }}
               >
                 {/* Header */}
                 <div style={{ 
                   background: "linear-gradient(135deg, #5a67d8 0%, #6b46c1 50%, #805ad5 100%)",
-                  padding: "24px",
+                  padding: "28px 24px",
                   textAlign: "center",
                   color: "#ffffff"
                 }}>
                   <div style={{ 
-                    width: "56px", 
-                    height: "56px", 
-                    background: "rgba(255,255,255,0.25)", 
-                    borderRadius: "50%",
-                    margin: "0 auto 12px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(255,255,255,0.2)"
+                    gap: "12px",
+                    marginBottom: "8px"
                   }}>
-                    <span style={{ fontSize: "28px", filter: "drop-shadow(0 0 8px rgba(255,255,255,0.8))" }}>🌐</span>
+                    <div style={{ 
+                      width: "40px", 
+                      height: "40px", 
+                      background: "rgba(255,255,255,0.2)", 
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 0 15px rgba(255,255,255,0.3), 0 0 30px rgba(255,255,255,0.15)"
+                    }}>
+                      <span style={{ fontSize: "22px", filter: "drop-shadow(0 0 6px rgba(255,255,255,0.8))" }}>🌐</span>
+                    </div>
+                    <h2 style={{ fontSize: "22px", fontWeight: "bold", color: "#ffffff", margin: 0 }}>云端寻踪搜索助手</h2>
                   </div>
-                  <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "4px", color: "#ffffff" }}>云端寻踪搜索助手</h2>
-                  <p style={{ fontSize: "14px", opacity: 0.9, color: "#ffffff" }}>收款账单 / Payment Invoice</p>
+                  <p style={{ fontSize: "14px", opacity: 0.9, color: "#ffffff", margin: 0 }}>收款账单 / Payment Invoice</p>
                 </div>
 
                 {/* Content */}
@@ -457,7 +465,18 @@ ${invoice.walletAddress}
                         {invoice.status === "paid" ? (
                           <><span style={{ color: "#16a34a" }}>✓</span> 已付款</>
                         ) : invoice.status === "pending" ? (
-                          <><span style={{ fontSize: "14px" }}>☑️</span> 待付款</>
+                          <><span style={{ 
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "16px",
+                            height: "16px",
+                            background: "#fef3c7",
+                            border: "1.5px solid #f59e0b",
+                            borderRadius: "3px",
+                            fontSize: "10px",
+                            color: "#92400e"
+                          }}>✓</span> 待付款</>
                         ) : (
                           "已取消"
                         )}
