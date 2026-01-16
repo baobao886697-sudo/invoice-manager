@@ -1,0 +1,13 @@
+# 环境变量配置说明
+
+创建 .env 文件，添加以下内容：
+
+# 数据库连接字符串 (PlanetScale 格式)
+# 从 PlanetScale 控制台获取
+DATABASE_URL=mysql://username:password@host/database?ssl={"rejectUnauthorized":true}
+
+# 服务器端口 (可选，默认3000)
+PORT=3000
+
+# 登录密码 (在前端代码中配置)
+# 默认密码: Bao12345678..
