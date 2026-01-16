@@ -84,7 +84,7 @@ export default function InvoiceDetail() {
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
+        scale: 3,
         backgroundColor: "#ffffff",
         useCORS: true,
         allowTaint: true,
@@ -398,29 +398,30 @@ ${invoice.walletAddress}
                   margin: "0 auto",
                   fontFamily: "system-ui, -apple-system, sans-serif",
                   backgroundColor: "#ffffff",
-                  borderRadius: "8px",
+                  borderRadius: "16px",
                   overflow: "hidden",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+                  boxShadow: "0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 4px 20px -5px rgba(0, 0, 0, 0.1)"
                 }}
               >
                 {/* Header */}
                 <div style={{ 
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  background: "linear-gradient(135deg, #5a67d8 0%, #6b46c1 50%, #805ad5 100%)",
                   padding: "24px",
                   textAlign: "center",
                   color: "#ffffff"
                 }}>
                   <div style={{ 
-                    width: "48px", 
-                    height: "48px", 
-                    background: "rgba(255,255,255,0.2)", 
+                    width: "56px", 
+                    height: "56px", 
+                    background: "rgba(255,255,255,0.25)", 
                     borderRadius: "50%",
                     margin: "0 auto 12px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    boxShadow: "0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(255,255,255,0.2)"
                   }}>
-                    <span style={{ fontSize: "24px" }}>🌐</span>
+                    <span style={{ fontSize: "28px", filter: "drop-shadow(0 0 8px rgba(255,255,255,0.8))" }}>🌐</span>
                   </div>
                   <h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "4px", color: "#ffffff" }}>云端寻踪搜索助手</h2>
                   <p style={{ fontSize: "14px", opacity: 0.9, color: "#ffffff" }}>收款账单 / Payment Invoice</p>
@@ -447,9 +448,19 @@ ${invoice.walletAddress}
                       <p style={{ color: "#666666", marginBottom: "2px" }}>订单状态</p>
                       <p style={{ 
                         fontWeight: "600", 
-                        color: invoice.status === "paid" ? "#16a34a" : invoice.status === "pending" ? "#ca8a04" : "#dc2626"
+                        color: invoice.status === "paid" ? "#16a34a" : invoice.status === "pending" ? "#ca8a04" : "#dc2626",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: "4px"
                       }}>
-                        {invoice.status === "paid" ? "✓ 已付款" : invoice.status === "pending" ? "待付款" : "已取消"}
+                        {invoice.status === "paid" ? (
+                          <><span style={{ color: "#16a34a" }}>✓</span> 已付款</>
+                        ) : invoice.status === "pending" ? (
+                          <><span style={{ fontSize: "14px" }}>☑️</span> 待付款</>
+                        ) : (
+                          "已取消"
+                        )}
                       </p>
                     </div>
                   </div>
@@ -501,12 +512,13 @@ ${invoice.walletAddress}
                     <div style={{ 
                       display: "flex", 
                       justifyContent: "space-between", 
-                      paddingTop: "8px",
+                      alignItems: "center",
+                      paddingTop: "10px",
                       borderTop: "1px solid #e5e7eb",
                       fontWeight: "bold"
                     }}>
-                      <span style={{ color: "#333333" }}>应付总额</span>
-                      <span style={{ color: "#7c3aed", fontSize: "16px" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
+                      <span style={{ color: "#333333", fontSize: "14px" }}>应付总额</span>
+                      <span style={{ color: "#7c3aed", fontSize: "18px", fontWeight: "700" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</span>
                     </div>
                   </div>
 
@@ -543,26 +555,30 @@ ${invoice.walletAddress}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
                       <div>
-                        <p style={{ color: "#666666", marginBottom: "2px" }}>付款金额</p>
-                        <p style={{ fontWeight: "bold", color: "#7c3aed" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
+                        <p style={{ color: "#666666", marginBottom: "4px" }}>付款金额</p>
+                        <p style={{ fontWeight: "700", color: "#7c3aed", fontSize: "16px" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ color: "#666666", marginBottom: "2px" }}>到账金额</p>
-                        <p style={{ fontWeight: "bold", color: "#16a34a" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
+                        <p style={{ color: "#666666", marginBottom: "4px" }}>到账金额</p>
+                        <p style={{ fontWeight: "700", color: "#16a34a", fontSize: "16px" }}>{Number(invoice.totalAmount).toFixed(0)} USDT</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Notice */}
                   <div style={{ 
-                    background: "#fef3c7", 
+                    background: "linear-gradient(135deg, #fef9e7 0%, #fef3c7 100%)", 
                     borderRadius: "8px", 
-                    padding: "12px",
+                    padding: "14px",
                     fontSize: "12px",
-                    color: "#92400e"
+                    color: "#92400e",
+                    border: "1px solid #fde68a"
                   }}>
-                    <p style={{ fontWeight: "600", marginBottom: "8px" }}>⚠️ 温馨提示：</p>
-                    <ul style={{ margin: 0, paddingLeft: "16px", lineHeight: "1.6" }}>
+                    <p style={{ fontWeight: "600", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span>⚠️</span>
+                      <span>温馨提示：</span>
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: "16px", lineHeight: "1.7" }}>
                       <li>请确保转账网络为 TRC20，其他网络转账将无法到账</li>
                       <li>转账金额请与应付金额保持一致</li>
                       <li>付款完成后请保留交易凭证</li>
