@@ -61,6 +61,40 @@ export default function InvoiceDetail() {
     },
   });
 
+  // Auto-check payment for pending invoices
+  const checkPaymentMutation = trpc.trc20.checkPayment.useMutation({
+    onSuccess: (result) => {
+      if (result.found) {
+        utils.invoices.getById.invalidate({ id: parseInt(id || "0") });
+        utils.invoices.list.invalidate();
+        utils.invoices.getStats.invalidate();
+        toast.success(`检测到付款！交易哈希: ${result.transactionId?.slice(0, 16)}...`);
+      }
+    },
+  });
+
+  // Auto-polling for pending invoices every 5 seconds
+  useEffect(() => {
+    if (!invoice || invoice.status !== 'pending' || !invoice.walletAddress) return;
+
+    const checkPayment = () => {
+      checkPaymentMutation.mutate({
+        walletAddress: invoice.walletAddress,
+        expectedAmount: Number(invoice.totalAmount),
+        invoiceId: invoice.id,
+        createdAfter: new Date(invoice.createdAt).getTime() - 60000, // 1 minute before creation
+      });
+    };
+
+    // Check immediately on load
+    checkPayment();
+
+    // Then check every 5 seconds
+    const interval = setInterval(checkPayment, 5000);
+
+    return () => clearInterval(interval);
+  }, [invoice?.id, invoice?.status, invoice?.walletAddress, invoice?.totalAmount]);
+
   const handleStatusChange = (newStatus: string) => {
     if (invoice) {
       updateStatusMutation.mutate({
@@ -335,6 +369,12 @@ ${invoice.walletAddress}
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {invoice.status === 'pending' && (
+              <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>正在检测到账...</span>
+              </div>
+            )}
             <Select
               value={invoice.status}
               onValueChange={handleStatusChange}
