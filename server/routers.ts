@@ -293,6 +293,92 @@ export const appRouter = router({
       }),
   }),
 
+  // TRC20 Payment Check Router
+  trc20: router({
+    // Check for incoming USDT transfers to a wallet address
+    checkPayment: protectedProcedure
+      .input(z.object({
+        walletAddress: z.string(),
+        expectedAmount: z.number(),
+        invoiceId: z.number().int(),
+        createdAfter: z.number(), // timestamp in milliseconds
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // TronGrid API to get TRC20 transfers
+          const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+          const url = `https://api.trongrid.io/v1/accounts/${input.walletAddress}/transactions/trc20?limit=20&only_to=true&contract_address=${USDT_CONTRACT}&min_timestamp=${input.createdAfter}`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (!data.success || !data.data) {
+            return { found: false, error: 'API request failed' };
+          }
+          
+          // Look for a transfer matching the expected amount
+          // USDT has 6 decimals, so we need to convert
+          const expectedValue = Math.round(input.expectedAmount * 1000000).toString();
+          
+          const matchingTransfer = data.data.find((tx: any) => {
+            return tx.value === expectedValue && tx.to === input.walletAddress;
+          });
+          
+          if (matchingTransfer) {
+            // Found matching transfer, update invoice status to paid
+            await db.updateInvoiceStatus(input.invoiceId, ctx.user.id, 'paid');
+            
+            return {
+              found: true,
+              transactionId: matchingTransfer.transaction_id,
+              amount: Number(matchingTransfer.value) / 1000000,
+              from: matchingTransfer.from,
+              timestamp: matchingTransfer.block_timestamp,
+            };
+          }
+          
+          return { found: false };
+        } catch (error) {
+          console.error('TRC20 check error:', error);
+          return { found: false, error: 'Failed to check payment' };
+        }
+      }),
+    
+    // Get recent transfers for a wallet (for debugging/display)
+    getRecentTransfers: protectedProcedure
+      .input(z.object({
+        walletAddress: z.string(),
+        limit: z.number().int().optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+          const limit = input.limit || 10;
+          const url = `https://api.trongrid.io/v1/accounts/${input.walletAddress}/transactions/trc20?limit=${limit}&only_to=true&contract_address=${USDT_CONTRACT}`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (!data.success || !data.data) {
+            return { transfers: [], error: 'API request failed' };
+          }
+          
+          const transfers = data.data.map((tx: any) => ({
+            transactionId: tx.transaction_id,
+            amount: Number(tx.value) / 1000000,
+            from: tx.from,
+            to: tx.to,
+            timestamp: tx.block_timestamp,
+          }));
+          
+          return { transfers };
+        } catch (error) {
+          console.error('Get transfers error:', error);
+          return { transfers: [], error: 'Failed to get transfers' };
+        }
+      }),
+  }),
+
   // User Settings Router
   settings: router({
     get: protectedProcedure.query(async ({ ctx }) => {
