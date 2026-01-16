@@ -32,6 +32,7 @@ export default function InvoiceDetail() {
   const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const utils = trpc.useUtils();
@@ -75,20 +76,50 @@ export default function InvoiceDetail() {
   };
 
   const handleExportImage = async () => {
-    if (!invoiceRef.current) return;
+    if (!invoiceRef.current || isExporting) return;
 
+    setIsExporting(true);
     try {
+      // Wait for any images to load
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        imageTimeout: 15000,
+        onclone: (clonedDoc) => {
+          // Ensure all styles are applied to cloned element
+          const clonedElement = clonedDoc.querySelector('.invoice-preview');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.transform = 'none';
+          }
+        }
       });
-      const link = document.createElement("a");
-      link.download = `${invoice?.invoiceNumber || "invoice"}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("图片导出成功");
+      
+      // Convert to blob and create download link
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.download = `${invoice?.invoiceNumber || "invoice"}.png`;
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          toast.success("图片导出成功");
+        } else {
+          toast.error("导出失败：无法生成图片");
+        }
+      }, 'image/png', 1.0);
     } catch (error) {
-      toast.error("导出失败");
+      console.error("Export error:", error);
+      toast.error("导出失败：" + (error instanceof Error ? error.message : "未知错误"));
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -257,8 +288,12 @@ ${invoice.walletAddress}
                 <SelectItem value="cancelled">已取消</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={handleExportImage}>
-              <Download className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={handleExportImage} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
               导出图片
             </Button>
             <Button variant="outline" onClick={handleCopyText}>
