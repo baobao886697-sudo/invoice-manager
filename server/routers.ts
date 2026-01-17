@@ -421,6 +421,95 @@ export const appRouter = router({
           return { transfers: [], error: 'Failed to get transfers' };
         }
       }),
+
+    // Get all token transactions (both incoming and outgoing)
+    getAllTransactions: protectedProcedure
+      .input(z.object({
+        walletAddress: z.string(),
+        limit: z.number().int().optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          if (!input.walletAddress) {
+            return { transactions: [] };
+          }
+          
+          const limit = input.limit || 30;
+          
+          // Get all TRC20 transactions (both incoming and outgoing)
+          const trc20Url = `https://api.trongrid.io/v1/accounts/${input.walletAddress}/transactions/trc20?limit=${limit}`;
+          const trc20Response = await fetch(trc20Url);
+          const trc20Data = await trc20Response.json();
+          
+          // Get TRX transactions
+          const trxUrl = `https://api.trongrid.io/v1/accounts/${input.walletAddress}/transactions?limit=${limit}`;
+          const trxResponse = await fetch(trxUrl);
+          const trxData = await trxResponse.json();
+          
+          const transactions: any[] = [];
+          
+          // Process TRC20 transactions
+          if (trc20Data.success && trc20Data.data) {
+            for (const tx of trc20Data.data) {
+              const isIncoming = tx.to === input.walletAddress;
+              const tokenSymbol = tx.token_info?.symbol || 'TRC20';
+              const decimals = tx.token_info?.decimals || 6;
+              const amount = Number(tx.value) / Math.pow(10, decimals);
+              
+              transactions.push({
+                transactionId: tx.transaction_id,
+                type: isIncoming ? 'in' : 'out',
+                tokenType: 'TRC20',
+                tokenSymbol,
+                amount,
+                from: tx.from,
+                to: tx.to,
+                timestamp: tx.block_timestamp,
+                contractAddress: tx.token_info?.address || '',
+              });
+            }
+          }
+          
+          // Process TRX transactions
+          if (trxData.success && trxData.data) {
+            for (const tx of trxData.data) {
+              // Only process transfer transactions
+              if (tx.raw_data?.contract?.[0]?.type === 'TransferContract') {
+                const contract = tx.raw_data.contract[0].parameter.value;
+                const toAddress = contract.to_address;
+                const fromAddress = contract.owner_address;
+                const amount = (contract.amount || 0) / 1000000; // TRX has 6 decimals
+                
+                // Convert hex addresses to base58
+                const isIncoming = tx.raw_data.contract[0].parameter.value.to_address === input.walletAddress;
+                
+                // Skip if amount is 0
+                if (amount > 0) {
+                  transactions.push({
+                    transactionId: tx.txID,
+                    type: isIncoming ? 'in' : 'out',
+                    tokenType: 'TRX',
+                    tokenSymbol: 'TRX',
+                    amount,
+                    from: fromAddress,
+                    to: toAddress,
+                    timestamp: tx.block_timestamp,
+                    contractAddress: '',
+                  });
+                }
+              }
+            }
+          }
+          
+          // Sort by timestamp descending
+          transactions.sort((a, b) => b.timestamp - a.timestamp);
+          
+          return { transactions: transactions.slice(0, limit) };
+        } catch (error) {
+          console.error('Get all transactions error:', error);
+          return { transactions: [], error: 'Failed to get transactions' };
+        }
+      }),
   }),
 
   // User Settings Router
