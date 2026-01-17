@@ -34,9 +34,6 @@ export default function InvoiceDetail() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [showTransfers, setShowTransfers] = useState(false);
-  const [transfers, setTransfers] = useState<Array<{amount: number, timestamp: number, from: string, transactionId: string}>>([]);
-  const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const utils = trpc.useUtils();
@@ -97,29 +94,6 @@ export default function InvoiceDetail() {
 
     return () => clearInterval(interval);
   }, [invoice?.id, invoice?.status, invoice?.walletAddress, invoice?.totalAmount]);
-
-  // Query transfers for the wallet address
-  const handleQueryTransfers = async () => {
-    if (!invoice?.walletAddress) return;
-    
-    setIsLoadingTransfers(true);
-    setShowTransfers(true);
-    
-    try {
-      const response = await fetch(`/api/trc20/transfers?address=${invoice.walletAddress}&limit=10`);
-      const data = await response.json();
-      
-      if (data.success && data.transfers) {
-        setTransfers(data.transfers);
-      } else {
-        toast.error('查询失败: ' + (data.error || '未知错误'));
-      }
-    } catch (error) {
-      toast.error('查询失败，请稍后重试');
-    } finally {
-      setIsLoadingTransfers(false);
-    }
-  };
 
   const handleStatusChange = (newStatus: string) => {
     if (invoice) {
@@ -486,63 +460,6 @@ ${invoice.walletAddress}
                 <div className="p-3 bg-muted rounded-lg font-mono text-sm break-all">
                   {invoice.walletAddress}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3 w-full"
-                  onClick={handleQueryTransfers}
-                  disabled={isLoadingTransfers}
-                >
-                  {isLoadingTransfers ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />查询中...</>
-                  ) : (
-                    <>🔍 查询收款记录</>
-                  )}
-                </Button>
-                
-                {showTransfers && (
-                  <div className="mt-4 border rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-medium">最近收款记录</h4>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setShowTransfers(false)}
-                      >
-                        关闭
-                      </Button>
-                    </div>
-                    {isLoadingTransfers ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-                        正在查询...
-                      </div>
-                    ) : transfers.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        暂无收款记录
-                      </div>
-                    ) : (
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
-                        {transfers.map((transfer, index) => (
-                          <div key={index} className="p-3 bg-muted/50 rounded-lg text-sm">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-medium text-green-600">+{transfer.amount} USDT</span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(transfer.timestamp).toLocaleString('zh-CN')}
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              来自: {transfer.from}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              交易ID: {transfer.transactionId}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
