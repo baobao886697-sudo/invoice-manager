@@ -12,6 +12,7 @@ import InvoiceHistory from "./pages/InvoiceHistory";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import WalletQuery from "./pages/WalletQuery";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/invoice/:id" component={InvoiceDetail} />
       <Route path="/statistics" component={Statistics} />
       <Route path="/settings" component={Settings} />
+      <Route path="/wallet-query" component={WalletQuery} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
