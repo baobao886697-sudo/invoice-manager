@@ -33,30 +33,45 @@ export default function WalletQuery() {
   const { 
     data: balanceData, 
     isLoading: balanceLoading, 
-    refetch: refetchBalance 
+    refetch: refetchBalance,
+    isFetching: balanceFetching
   } = trpc.trc20.getWalletBalance.useQuery(
     { walletAddress: settings?.walletAddress || '' },
-    { enabled: !!settings?.walletAddress }
+    { 
+      enabled: !!settings?.walletAddress,
+      staleTime: 0,
+      refetchOnMount: true,
+    }
   );
   
   // Get recent transfers (USDT only)
   const { 
     data: transfersData, 
     isLoading: transfersLoading, 
-    refetch: refetchTransfers 
+    refetch: refetchTransfers,
+    isFetching: transfersFetching
   } = trpc.trc20.getRecentTransfers.useQuery(
     { walletAddress: settings?.walletAddress || '', limit: 20 },
-    { enabled: !!settings?.walletAddress }
+    { 
+      enabled: !!settings?.walletAddress,
+      staleTime: 0,
+      refetchOnMount: true,
+    }
   );
 
   // Get all transactions (all tokens, both in and out)
   const { 
     data: allTransactionsData, 
     isLoading: allTransactionsLoading, 
-    refetch: refetchAllTransactions 
+    refetch: refetchAllTransactions,
+    isFetching: allTransactionsFetching
   } = trpc.trc20.getAllTransactions.useQuery(
     { walletAddress: settings?.walletAddress || '', limit: 30 },
-    { enabled: !!settings?.walletAddress }
+    { 
+      enabled: !!settings?.walletAddress,
+      staleTime: 0,
+      refetchOnMount: true,
+    }
   );
 
   // Auto refresh every 30 seconds
@@ -119,7 +134,8 @@ export default function WalletQuery() {
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
   };
 
-  const isLoading = settingsLoading || balanceLoading || transfersLoading;
+  const isLoading = settingsLoading || balanceLoading || transfersLoading || allTransactionsLoading;
+  const isFetching = balanceFetching || transfersFetching || allTransactionsFetching;
 
   // Get token color based on symbol
   const getTokenColor = (symbol: string) => {
@@ -150,9 +166,9 @@ export default function WalletQuery() {
             variant="outline" 
             size="sm" 
             onClick={handleRefresh}
-            disabled={isRefreshing || !settings?.walletAddress}
+            disabled={isRefreshing || isFetching || !settings?.walletAddress}
           >
-            {isRefreshing ? (
+            {(isRefreshing || isFetching) ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -308,7 +324,7 @@ export default function WalletQuery() {
             </div>
           </CardHeader>
           <CardContent>
-            {transfersLoading ? (
+            {(transfersLoading || (transfersFetching && !transfersData)) ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
@@ -405,7 +421,7 @@ export default function WalletQuery() {
             </div>
           </CardHeader>
           <CardContent>
-            {allTransactionsLoading ? (
+            {(allTransactionsLoading || (allTransactionsFetching && !allTransactionsData)) ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
