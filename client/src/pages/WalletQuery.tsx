@@ -25,6 +25,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 export default function WalletQuery() {
   const [copied, setCopied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncRefreshing, setIsSyncRefreshing] = useState(false); // For auto-refresh sync
   
   // Get user settings to get wallet address
   const { data: settings, isLoading: settingsLoading } = trpc.settings.get.useQuery();
@@ -74,18 +75,62 @@ export default function WalletQuery() {
     }
   );
 
-  // Auto refresh every 30 seconds
+  // Get pending invoices to enable fast refresh when there are pending payments
+  const { data: pendingInvoices } = trpc.invoices.list.useQuery(
+    { status: 'pending', limit: 10 },
+    { 
+      staleTime: 0,
+      refetchOnMount: true,
+    }
+  );
+
+  // Check if there are any pending invoices
+  const hasPendingInvoices = pendingInvoices && pendingInvoices.length > 0;
+
+  // Fast refresh every 5 seconds when there are pending invoices
+  // This syncs with the payment check in InvoiceDetail page
   useEffect(() => {
-    if (!settings?.walletAddress) return;
+    if (!settings?.walletAddress || !hasPendingInvoices) return;
     
-    const interval = setInterval(() => {
-      refetchBalance();
-      refetchTransfers();
-      refetchAllTransactions();
+    const fastInterval = setInterval(async () => {
+      // Set sync refreshing to show loading state for both sections simultaneously
+      setIsSyncRefreshing(true);
+      try {
+        // Refresh all data together - wait for all to complete so they display simultaneously
+        await Promise.all([
+          refetchBalance(),
+          refetchTransfers(),
+          refetchAllTransactions()
+        ]);
+      } finally {
+        setIsSyncRefreshing(false);
+      }
+    }, 5000);
+    
+    return () => clearInterval(fastInterval);
+  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchTransfers, refetchAllTransactions]);
+
+  // Auto refresh every 30 seconds (only when no pending invoices, to avoid duplicate refreshes)
+  useEffect(() => {
+    if (!settings?.walletAddress || hasPendingInvoices) return;
+    
+    const interval = setInterval(async () => {
+      // Set sync refreshing to show loading state for both sections simultaneously
+      setIsSyncRefreshing(true);
+      try {
+        // Refresh all data together - wait for all to complete so they display simultaneously
+        await Promise.all([
+          refetchBalance(),
+          refetchTransfers(),
+          refetchAllTransactions()
+        ]);
+      } finally {
+        setIsSyncRefreshing(false);
+      }
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [settings?.walletAddress, refetchBalance, refetchTransfers, refetchAllTransactions]);
+  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchTransfers, refetchAllTransactions]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -136,6 +181,9 @@ export default function WalletQuery() {
 
   const isLoading = settingsLoading || balanceLoading || transfersLoading || allTransactionsLoading;
   const isFetching = balanceFetching || transfersFetching || allTransactionsFetching;
+  
+  // Combined sync state - when auto-refreshing, both sections show loading together
+  const isAutoSyncing = isSyncRefreshing;
 
   // Get token color based on symbol
   const getTokenColor = (symbol: string) => {
@@ -324,7 +372,7 @@ export default function WalletQuery() {
             </div>
           </CardHeader>
           <CardContent>
-            {(transfersLoading || (transfersFetching && !transfersData)) ? (
+            {(transfersLoading || (transfersFetching && !transfersData) || isAutoSyncing) ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
@@ -421,7 +469,7 @@ export default function WalletQuery() {
             </div>
           </CardHeader>
           <CardContent>
-            {(allTransactionsLoading || (allTransactionsFetching && !allTransactionsData)) ? (
+            {(allTransactionsLoading || (allTransactionsFetching && !allTransactionsData) || isAutoSyncing) ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
@@ -518,8 +566,10 @@ export default function WalletQuery() {
         {/* Auto-refresh indicator */}
         <div className="text-center text-sm text-muted-foreground">
           <span className="flex items-center justify-center gap-2">
-            <RefreshCw className="h-3 w-3" />
-            数据每 30 秒自动刷新
+            <RefreshCw className={`h-3 w-3 ${hasPendingInvoices ? 'animate-spin' : ''}`} />
+            {hasPendingInvoices 
+              ? '检测到待付款账单，数据每 5 秒自动刷新' 
+              : '数据每 30 秒自动刷新'}
           </span>
         </div>
       </div>
