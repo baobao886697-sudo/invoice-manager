@@ -344,6 +344,50 @@ export const appRouter = router({
         }
       }),
     
+    // Get wallet balance (USDT and TRX)
+    getWalletBalance: protectedProcedure
+      .input(z.object({
+        walletAddress: z.string(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          if (!input.walletAddress) {
+            return { usdtBalance: 0, trxBalance: 0 };
+          }
+          
+          // Get TRX balance
+          const accountUrl = `https://api.trongrid.io/v1/accounts/${input.walletAddress}`;
+          const accountResponse = await fetch(accountUrl);
+          const accountData = await accountResponse.json();
+          
+          let trxBalance = 0;
+          let usdtBalance = 0;
+          
+          if (accountData.success && accountData.data && accountData.data.length > 0) {
+            const account = accountData.data[0];
+            // TRX balance is in SUN (1 TRX = 1,000,000 SUN)
+            trxBalance = (account.balance || 0) / 1000000;
+            
+            // Find USDT balance in trc20 tokens
+            const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+            if (account.trc20) {
+              const usdtToken = account.trc20.find((token: any) => 
+                Object.keys(token)[0] === USDT_CONTRACT
+              );
+              if (usdtToken) {
+                // USDT has 6 decimals
+                usdtBalance = Number(usdtToken[USDT_CONTRACT]) / 1000000;
+              }
+            }
+          }
+          
+          return { usdtBalance, trxBalance };
+        } catch (error) {
+          console.error('Get wallet balance error:', error);
+          return { usdtBalance: 0, trxBalance: 0, error: 'Failed to get balance' };
+        }
+      }),
+
     // Get recent transfers for a wallet (for debugging/display)
     getRecentTransfers: protectedProcedure
       .input(z.object({
