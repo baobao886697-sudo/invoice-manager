@@ -18,14 +18,13 @@ import {
   Loader2,
   ArrowLeftRight
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function WalletQuery() {
   const [copied, setCopied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSyncRefreshing, setIsSyncRefreshing] = useState(false); // For auto-refresh sync
   
   // Get user settings to get wallet address
   const { data: settings, isLoading: settingsLoading } = trpc.settings.get.useQuery();
@@ -44,15 +43,15 @@ export default function WalletQuery() {
       refetchOnMount: true,
     }
   );
-  
-  // Get recent transfers (USDT only)
+
+  // Get all transactions (all tokens, both in and out) - SINGLE API for both sections
   const { 
-    data: transfersData, 
-    isLoading: transfersLoading, 
-    refetch: refetchTransfers,
-    isFetching: transfersFetching
-  } = trpc.trc20.getRecentTransfers.useQuery(
-    { walletAddress: settings?.walletAddress || '', limit: 20 },
+    data: allTransactionsData, 
+    isLoading: allTransactionsLoading, 
+    refetch: refetchAllTransactions,
+    isFetching: allTransactionsFetching
+  } = trpc.trc20.getAllTransactions.useQuery(
+    { walletAddress: settings?.walletAddress || '', limit: 50 },
     { 
       enabled: !!settings?.walletAddress,
       staleTime: 0,
@@ -60,20 +59,13 @@ export default function WalletQuery() {
     }
   );
 
-  // Get all transactions (all tokens, both in and out)
-  const { 
-    data: allTransactionsData, 
-    isLoading: allTransactionsLoading, 
-    refetch: refetchAllTransactions,
-    isFetching: allTransactionsFetching
-  } = trpc.trc20.getAllTransactions.useQuery(
-    { walletAddress: settings?.walletAddress || '', limit: 30 },
-    { 
-      enabled: !!settings?.walletAddress,
-      staleTime: 0,
-      refetchOnMount: true,
-    }
-  );
+  // Extract USDT incoming transfers from allTransactionsData (max 20)
+  const usdtTransfers = useMemo(() => {
+    if (!allTransactionsData?.transactions) return [];
+    return allTransactionsData.transactions
+      .filter((tx: any) => tx.type === 'in' && tx.tokenSymbol === 'USDT')
+      .slice(0, 20);
+  }, [allTransactionsData]);
 
   // Get pending invoices to enable fast refresh when there are pending payments
   const { data: pendingInvoices } = trpc.invoices.list.useQuery(
@@ -88,54 +80,38 @@ export default function WalletQuery() {
   const hasPendingInvoices = pendingInvoices && pendingInvoices.length > 0;
 
   // Fast refresh every 5 seconds when there are pending invoices
-  // This syncs with the payment check in InvoiceDetail page
   useEffect(() => {
     if (!settings?.walletAddress || !hasPendingInvoices) return;
     
     const fastInterval = setInterval(async () => {
-      // Set sync refreshing to show loading state for both sections simultaneously
-      setIsSyncRefreshing(true);
-      try {
-        // Refresh all data together - wait for all to complete so they display simultaneously
-        await Promise.all([
-          refetchBalance(),
-          refetchTransfers(),
-          refetchAllTransactions()
-        ]);
-      } finally {
-        setIsSyncRefreshing(false);
-      }
+      // Refresh all data together
+      await Promise.all([
+        refetchBalance(),
+        refetchAllTransactions()
+      ]);
     }, 5000);
     
     return () => clearInterval(fastInterval);
-  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchTransfers, refetchAllTransactions]);
+  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchAllTransactions]);
 
-  // Auto refresh every 30 seconds (only when no pending invoices, to avoid duplicate refreshes)
+  // Auto refresh every 30 seconds (only when no pending invoices)
   useEffect(() => {
     if (!settings?.walletAddress || hasPendingInvoices) return;
     
     const interval = setInterval(async () => {
-      // Set sync refreshing to show loading state for both sections simultaneously
-      setIsSyncRefreshing(true);
-      try {
-        // Refresh all data together - wait for all to complete so they display simultaneously
-        await Promise.all([
-          refetchBalance(),
-          refetchTransfers(),
-          refetchAllTransactions()
-        ]);
-      } finally {
-        setIsSyncRefreshing(false);
-      }
+      await Promise.all([
+        refetchBalance(),
+        refetchAllTransactions()
+      ]);
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchTransfers, refetchAllTransactions]);
+  }, [settings?.walletAddress, hasPendingInvoices, refetchBalance, refetchAllTransactions]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refetchBalance(), refetchTransfers(), refetchAllTransactions()]);
+      await Promise.all([refetchBalance(), refetchAllTransactions()]);
       toast.success("数据已刷新");
     } catch (error) {
       toast.error("刷新失败");
@@ -179,11 +155,11 @@ export default function WalletQuery() {
     return `${address.slice(0, 8)}...${address.slice(-6)}`;
   };
 
-  const isLoading = settingsLoading || balanceLoading || transfersLoading || allTransactionsLoading;
-  const isFetching = balanceFetching || transfersFetching || allTransactionsFetching;
+  const isLoading = settingsLoading || balanceLoading || allTransactionsLoading;
+  const isFetching = balanceFetching || allTransactionsFetching;
   
-  // Combined sync state - when auto-refreshing, both sections show loading together
-  const isAutoSyncing = isSyncRefreshing;
+  // Combined loading state for both sections - they share the same data source now
+  const isDataLoading = allTransactionsLoading || (isRefreshing && allTransactionsFetching);
 
   // Get token color based on symbol
   const getTokenColor = (symbol: string) => {
@@ -337,12 +313,12 @@ export default function WalletQuery() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {transfersLoading ? (
+              {allTransactionsLoading ? (
                 <Skeleton className="h-10 w-20" />
               ) : (
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">
-                    {transfersData?.transfers?.length || 0}
+                    {usdtTransfers.length}
                   </span>
                   <span className="text-sm text-muted-foreground">笔</span>
                 </div>
@@ -351,7 +327,7 @@ export default function WalletQuery() {
           </Card>
         </div>
 
-        {/* Recent Transfers */}
+        {/* Recent USDT Transfers - Extracted from allTransactionsData */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -364,15 +340,15 @@ export default function WalletQuery() {
                   显示最近 20 笔 USDT-TRC20 入账记录
                 </CardDescription>
               </div>
-              {transfersData?.transfers && transfersData.transfers.length > 0 && (
+              {usdtTransfers.length > 0 && (
                 <Badge variant="secondary">
-                  共 {transfersData.transfers.length} 笔
+                  共 {usdtTransfers.length} 笔
                 </Badge>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {(transfersLoading || (transfersFetching && !transfersData) || isAutoSyncing) ? (
+            {isDataLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
@@ -389,9 +365,9 @@ export default function WalletQuery() {
               <div className="text-center py-8 text-muted-foreground">
                 请先配置收款地址
               </div>
-            ) : transfersData?.transfers && transfersData.transfers.length > 0 ? (
+            ) : usdtTransfers.length > 0 ? (
               <div className="space-y-1">
-                {transfersData.transfers.map((transfer: any, index: number) => (
+                {usdtTransfers.map((transfer: any, index: number) => (
                   <div key={transfer.transactionId}>
                     <div className="flex items-center gap-4 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors">
                       <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
@@ -428,7 +404,7 @@ export default function WalletQuery() {
                         </a>
                       </div>
                     </div>
-                    {index < transfersData.transfers.length - 1 && (
+                    {index < usdtTransfers.length - 1 && (
                       <Separator className="my-1" />
                     )}
                   </div>
@@ -469,7 +445,7 @@ export default function WalletQuery() {
             </div>
           </CardHeader>
           <CardContent>
-            {(allTransactionsLoading || (allTransactionsFetching && !allTransactionsData) || isAutoSyncing) ? (
+            {isDataLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center gap-4">
