@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { 
   Wallet, 
   ArrowDownLeft, 
+  ArrowUpRight,
   RefreshCw, 
   Copy, 
   Check, 
@@ -14,7 +15,8 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
-  Loader2
+  Loader2,
+  ArrowLeftRight
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -37,13 +39,23 @@ export default function WalletQuery() {
     { enabled: !!settings?.walletAddress }
   );
   
-  // Get recent transfers
+  // Get recent transfers (USDT only)
   const { 
     data: transfersData, 
     isLoading: transfersLoading, 
     refetch: refetchTransfers 
   } = trpc.trc20.getRecentTransfers.useQuery(
     { walletAddress: settings?.walletAddress || '', limit: 20 },
+    { enabled: !!settings?.walletAddress }
+  );
+
+  // Get all transactions (all tokens, both in and out)
+  const { 
+    data: allTransactionsData, 
+    isLoading: allTransactionsLoading, 
+    refetch: refetchAllTransactions 
+  } = trpc.trc20.getAllTransactions.useQuery(
+    { walletAddress: settings?.walletAddress || '', limit: 30 },
     { enabled: !!settings?.walletAddress }
   );
 
@@ -54,15 +66,16 @@ export default function WalletQuery() {
     const interval = setInterval(() => {
       refetchBalance();
       refetchTransfers();
+      refetchAllTransactions();
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [settings?.walletAddress, refetchBalance, refetchTransfers]);
+  }, [settings?.walletAddress, refetchBalance, refetchTransfers, refetchAllTransactions]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refetchBalance(), refetchTransfers()]);
+      await Promise.all([refetchBalance(), refetchTransfers(), refetchAllTransactions()]);
       toast.success("数据已刷新");
     } catch (error) {
       toast.error("刷新失败");
@@ -107,6 +120,20 @@ export default function WalletQuery() {
   };
 
   const isLoading = settingsLoading || balanceLoading || transfersLoading;
+
+  // Get token color based on symbol
+  const getTokenColor = (symbol: string) => {
+    const colors: Record<string, string> = {
+      'USDT': 'bg-green-100 text-green-700',
+      'TRX': 'bg-red-100 text-red-700',
+      'USDC': 'bg-blue-100 text-blue-700',
+      'BTT': 'bg-purple-100 text-purple-700',
+      'WIN': 'bg-yellow-100 text-yellow-700',
+      'JST': 'bg-orange-100 text-orange-700',
+      'SUN': 'bg-amber-100 text-amber-700',
+    };
+    return colors[symbol] || 'bg-gray-100 text-gray-700';
+  };
 
   return (
     <DashboardLayout>
@@ -351,6 +378,121 @@ export default function WalletQuery() {
                 <p className="text-muted-foreground">暂无到账记录</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   新的 USDT 转账将显示在这里
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* All Transactions (Comprehensive) */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-5 w-5 text-blue-500" />
+                  综合交易记录
+                </CardTitle>
+                <CardDescription>
+                  显示所有币种的收入和支出记录
+                </CardDescription>
+              </div>
+              {allTransactionsData?.transactions && allTransactionsData.transactions.length > 0 && (
+                <Badge variant="secondary">
+                  共 {allTransactionsData.transactions.length} 笔
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {allTransactionsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            ) : !settings?.walletAddress ? (
+              <div className="text-center py-8 text-muted-foreground">
+                请先配置收款地址
+              </div>
+            ) : allTransactionsData?.transactions && allTransactionsData.transactions.length > 0 ? (
+              <div className="space-y-1">
+                {allTransactionsData.transactions.map((tx: any, index: number) => {
+                  const isIncoming = tx.type === 'in';
+                  return (
+                    <div key={tx.transactionId + index}>
+                      <div className="flex items-center gap-4 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                          isIncoming ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {isIncoming ? (
+                            <ArrowDownLeft className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <ArrowUpRight className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {isIncoming ? '收到转账' : '转出'}
+                            </span>
+                            <Badge className={`text-xs ${getTokenColor(tx.tokenSymbol)}`}>
+                              {tx.tokenSymbol}
+                            </Badge>
+                            {tx.tokenType === 'TRC20' && tx.tokenSymbol !== 'TRX' && (
+                              <Badge variant="outline" className="text-xs">
+                                TRC20
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <span>
+                              {isIncoming ? '来自' : '发送至'}: {shortenAddress(isIncoming ? tx.from : tx.to)}
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatTime(tx.timestamp)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className={`font-bold ${isIncoming ? 'text-green-600' : 'text-red-600'}`}>
+                            {isIncoming ? '+' : '-'}{tx.amount.toLocaleString()} {tx.tokenSymbol}
+                          </div>
+                          <a
+                            href={`https://tronscan.org/#/transaction/${tx.transactionId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline flex items-center gap-1 justify-end"
+                          >
+                            查看详情
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
+                      {index < allTransactionsData.transactions.length - 1 && (
+                        <Separator className="my-1" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <ArrowLeftRight className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">暂无交易记录</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  所有币种的收入和支出将显示在这里
                 </p>
               </div>
             )}
