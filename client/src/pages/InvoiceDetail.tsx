@@ -125,6 +125,30 @@ export default function InvoiceDetail() {
         allowTaint: true,
         logging: false,
         imageTimeout: 15000,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        width: 400,
+        windowWidth: 400,
+        onclone: (clonedDoc) => {
+          // Remove all stylesheets from cloned document to avoid oklch issues
+          const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
+          stylesheets.forEach(sheet => {
+            if (sheet.parentNode) {
+              sheet.parentNode.removeChild(sheet);
+            }
+          });
+          
+          // Add basic reset styles
+          const resetStyle = clonedDoc.createElement('style');
+          resetStyle.textContent = `
+            * { 
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+          `;
+          clonedDoc.head.appendChild(resetStyle);
+        }
       });
       
       // Convert to blob
@@ -194,6 +218,21 @@ export default function InvoiceDetail() {
         allowTaint: true,
         logging: false,
         imageTimeout: 15000,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        width: 400,
+        windowWidth: 400,
+        onclone: (clonedDoc) => {
+          const stylesheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
+          stylesheets.forEach(sheet => {
+            if (sheet.parentNode) {
+              sheet.parentNode.removeChild(sheet);
+            }
+          });
+          const resetStyle = clonedDoc.createElement('style');
+          resetStyle.textContent = `* { box-sizing: border-box; margin: 0; padding: 0; }`;
+          clonedDoc.head.appendChild(resetStyle);
+        }
       });
       
       const dataUrl = canvas.toDataURL('image/png', 1.0);
