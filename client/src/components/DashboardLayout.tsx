@@ -19,7 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, FileText, DollarSign, BarChart3, Settings, Plus, History, User } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, FileText, DollarSign, BarChart3, Settings, Plus, History, User, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -53,6 +53,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "仪表盘", path: "/" },
   { icon: Plus, label: "创建账单", path: "/invoice/new" },
   { icon: History, label: "账单历史", path: "/invoice/history" },
+  { icon: Search, label: "收款查询", path: "/wallet-query" },
   { icon: DollarSign, label: "价格表管理", path: "/price-tiers" },
   { icon: BarChart3, label: "数据统计", path: "/statistics" },
   { icon: Settings, label: "系统设置", path: "/settings" },
